@@ -1,0 +1,110 @@
+---
+title: "Pre-Interview exercise CGPS"
+author: "Rutuja"
+date: "2/18/2022"
+output: html_document
+---
+
+
+QUAST stands for QUality ASsessment Tool. The tool evaluates genome assemblies by computing various metrics. 
+QUAST—a quality assessment tool for evaluating and comparing genome assemblies. QUAST can evaluate assemblies both with a reference genome, as well as without a reference. 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyr)
+```
+
+```{r message=FALSE, warning=FALSE}
+setwd("C:/Users/Rutuja Chhajed/OneDrive - Nexus365/CGPS")
+data <- read_csv("data.csv", trim_ws = FALSE)
+
+```
+
+Question 1: How many samples that have failed the contamination check (confindr.contam_status.check_result) and have contamination of > 5% (confindr.percentage_contamination.metric_value)
+
+- 57 out of 1000 samples have failed the contamination check and have >5% contamination. 
+-Samples with 0% contamination % pass, and those >0 failed (67)
+```{r}
+
+table(data$confindr.contam_status.check_result)
+d1<-subset(data, data$confindr.contam_status.check_result=="FAILURE"&data$confindr.percentage_contamination.metric_value>5)
+length(unique(d1$sample_name))
+
+
+
+ggplot(data, aes(x=factor(confindr.contam_status.check_result),y=confindr.percentage_contamination.metric_value)) + 
+  geom_boxplot()
+fail<-subset(data,data$confindr.contam_status.check_result=="FAILURE")
+hist(fail$confindr.percentage_contamination.metric_value)
+```
+Question 2: How many samples that have less than  or equal to 50 contigs and a N50>750,000
+
+
+```{r}
+d2<-subset(data, data$`quast.# contigs (>= 1000 bp).metric_value` >=50 & data$quast.N50.metric_value>=750000)
+```
+
+Question 3: Select all numeric columns and rename to remove the .quast prefix and .metric_value suffix
+
+Rename confindr.percentage_contamination to contamination_percent
+
+
+```{r}
+library(stringr)
+library(dplyr)
+
+nums <- unlist(lapply(data, is.numeric))  
+
+colnames(data)[nums]<-gsub("quast.","",colnames(data[,nums]), ignore.case = TRUE)
+colnames(data)[nums]<-gsub(".metric_value","",colnames(data[,nums]), ignore.case = TRUE)
+colnames(data)
+
+data <- data %>%
+  rename(contamination_percent=confindr.percentage_contamination)
+
+colnames(data)
+```
+
+
+
+Question4: box plot of Total length (>1000 bp)
+
+Overall, boxplots are extremely helpful in quickly visualization of the central tendency and spread of the data. 
+They provide no information on the underlying data distribution and provide a somewhat arbitrary detection of extreme values especially for non-normal data distributions (Kampstra 2008; Krzywinski and Altman 2014).
+Outliers:  1.5 times the interquartile range above the upper quartile and below the lower quartile (Q1 - 1.5 * IQR or Q3 + 1.5 * IQR).
+
+```{r}
+library(ggplot2)
+options(scipen=10000)
+p <- ggplot(data, aes(x = factor(1), y = `Total length (>= 1000 bp)`)) + 
+  geom_boxplot(width = 0.4, fill = "white",outlier.colour = "red") + labs(x = NULL)  
+p
+```
+Question 5: Convert to 1 observation per row (Tidy format) with only sample) name, Metric and value.
+
+```{r}
+col.nums<-unlist(sapply(data[1,],is.numeric))
+d3<-pivot_longer(data,which(col.nums==TRUE),names_to = "metric",values_to = "value")
+final_data<-d3[,c("sample_name","metric","value")]
+
+d4<-sapply(data, as.character)
+d4<-as.data.frame(d4)
+
+d5<-pivot_longer(d4,2:12,names_to = "metric",values_to = "value")
+final_data1<-d5[,c("sample_name","metric","value")]
+
+```
+
+Question 6: Violin plots for all numeric variables
+
+Violin plots are similar to box plots, except that they also show the kernel probability density of the data at different values
+```{r}
+# Basic violin 
+final_data$metric<-as.factor(final_data$metric)
+p <- ggplot(final_data, aes(x=factor(1), y=as.numeric(value)),fill='white') + 
+  geom_violin()+ facet_wrap(~metric,  scales = "free_y")+ylab("Value")+xlab("") +geom_jitter(width=0.15, alpha=0.1,color='red')+theme_bw()
+
+p
+
+```
+
