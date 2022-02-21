@@ -41,6 +41,11 @@ pre { /* Code block - determines code spacing between lines */
 
 Background: QUAST stands for QUality ASsessment Tool. The tool evaluates genome assemblies by computing various metrics. <br/>
 data: Quality metrics for bacterial genome sequencing<br/>
+N50 is a measure to describe the quality of assembled genomes that are fragmented in contigs of different length. N50 is the shortest contig length that needs to be included for covering 50% of the genome.
+-> Half of the genome sequence is covered by contigs larger than or equal the N50 contig size.
+
+-> The sum of the lengths of all contigs of size N50 or longer contain at least 50 percent of the total genome sequence.
+
 <br/>
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -79,10 +84,12 @@ rm(d1)#removing dataframe
 ```
 Question 2: How many samples that have less than  or equal to 50 contigs and a N50>=750,000<br/>
 
-Answer: None of the samples have less than  or equal to 50 contigs and a N50>=750,000<br/>
+Answer: 49 samples have less than  or equal to 50 contigs and a N50>=750,000<br/>
 
 ```{r}
-d2<-subset(data, data$`quast.# contigs (>= 1000 bp).metric_value` >=50 & data$quast.N50.metric_value>=750000)
+d2<-subset(data, data$`quast.# contigs (>= 1000 bp).metric_value` <=50 & data$quast.N50.metric_value>=750000)
+length(unique(d2$sample_name)) 
+
 rm(d2)
 ```
 
@@ -106,6 +113,8 @@ print(colnames(data))
 ```
 
 Question4: box plot of Total length (>1000 bp) <br/>
+
+Total length (> 1000 bps): Toal no of bases in contigs of length> 1000 bps
 
 The boxplot shows the spread of total length  (>1000 bp).The boz shows the data points contained between the 1st and 3rd quartile (Q1 & Q3) and the thick black line is the median of the data. The red points are the outliers and are data points  1.5 times the interquartile range above the upper quartile and below the lower quartile (Q1 - 1.5 * IQR or Q3 + 1.5 * IQR). They provide no information on the underlying data distribution.
 <br/>
