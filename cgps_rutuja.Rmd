@@ -5,9 +5,9 @@ date: "2/18/2022"
 output: html_document
 ---
 
-
-QUAST stands for QUality ASsessment Tool. The tool evaluates genome assemblies by computing various metrics. 
-QUAST—a quality assessment tool for evaluating and comparing genome assemblies. QUAST can evaluate assemblies both with a reference genome, as well as without a reference. 
+Background: QUAST stands for QUality ASsessment Tool. The tool evaluates genome assemblies by computing various metrics. <br/>
+data: Quality metrics for bacterial genome sequencing<br/>
+<br/>
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(readr)
@@ -15,94 +15,101 @@ library(tidyr)
 ```
 
 ```{r message=FALSE, warning=FALSE}
-setwd("C:/Users/Rutuja Chhajed/OneDrive - Nexus365/CGPS")
+setwd("C:/Users/Rutuja Chhajed/OneDrive - Nexus365/CGPS/CGPS-rutuja")
 data <- read_csv("data.csv", trim_ws = FALSE)
 
 ```
 
-Question 1: How many samples that have failed the contamination check (confindr.contam_status.check_result) and have contamination of > 5% (confindr.percentage_contamination.metric_value)
+Question 1: How many samples that have failed the contamination check (confindr.contam_status.check_result) and have contamination of > 5% <br/> (confindr.percentage_contamination.metric_value)<br/>
 
-- 57 out of 1000 samples have failed the contamination check and have >5% contamination. 
--Samples with 0% contamination % pass, and those >0 failed (67)
-```{r}
+Answer: 57 out of 1000 samples have failed the contamination check and have >5% contamination. <br/>
+-Samples with 0% contamination % pass, and those >0 failed (67) <br/>
+<br/>
+<br/>
+```{r message=FALSE, warning=FALSE}
 
 table(data$confindr.contam_status.check_result)
 d1<-subset(data, data$confindr.contam_status.check_result=="FAILURE"&data$confindr.percentage_contamination.metric_value>5)
-length(unique(d1$sample_name))
+length(unique(d1$sample_name))## samples that failed the contamination check and have >5% contamination. 
 
 
-
+#Plotting to see the distribution of contamination percentages in passed and failed samples
+library(ggplot2)
 ggplot(data, aes(x=factor(confindr.contam_status.check_result),y=confindr.percentage_contamination.metric_value)) + 
   geom_boxplot()
-fail<-subset(data,data$confindr.contam_status.check_result=="FAILURE")
-hist(fail$confindr.percentage_contamination.metric_value)
-```
-Question 2: How many samples that have less than  or equal to 50 contigs and a N50>750,000
 
+#fail<-subset(data,data$confindr.contam_status.check_result=="FAILURE")
+#hist(fail$confindr.percentage_contamination.metric_value)#Histogram to better see distribution of contamination percentages
+rm(fail)#removing dataframe
+rm(d1)#removing dataframe
+```
+Question 2: How many samples that have less than  or equal to 50 contigs and a N50>=750,000<br/>
+
+Answer: None of the samples have less than  or equal to 50 contigs and a N50>=750,000<br/>
 
 ```{r}
 d2<-subset(data, data$`quast.# contigs (>= 1000 bp).metric_value` >=50 & data$quast.N50.metric_value>=750000)
+rm(d2)
 ```
 
-Question 3: Select all numeric columns and rename to remove the .quast prefix and .metric_value suffix
+Question 3: Select all numeric columns and rename to remove the .quast prefix and .metric_value suffix<br/>
+Rename confindr.percentage_contamination to contamination_percent<br/>
 
-Rename confindr.percentage_contamination to contamination_percent
 
-
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(stringr)
 library(dplyr)
 
-nums <- unlist(lapply(data, is.numeric))  
+nums <- unlist(lapply(data, is.numeric))  #Selecting numeric variables
 
-colnames(data)[nums]<-gsub("quast.","",colnames(data[,nums]), ignore.case = TRUE)
-colnames(data)[nums]<-gsub(".metric_value","",colnames(data[,nums]), ignore.case = TRUE)
-colnames(data)
+colnames(data)[nums]<-gsub("quast.","",colnames(data[,nums]), ignore.case = TRUE) #Replacing "quast" by ""
+colnames(data)[nums]<-gsub(".metric_value","",colnames(data[,nums]), ignore.case = TRUE) #Replacing "metric" by ""
 
 data <- data %>%
   rename(contamination_percent=confindr.percentage_contamination)
 
-colnames(data)
+print(colnames(data))
 ```
 
+Question4: box plot of Total length (>1000 bp) <br/>
 
-
-Question4: box plot of Total length (>1000 bp)
-
-Overall, boxplots are extremely helpful in quickly visualization of the central tendency and spread of the data. 
-They provide no information on the underlying data distribution and provide a somewhat arbitrary detection of extreme values especially for non-normal data distributions (Kampstra 2008; Krzywinski and Altman 2014).
-Outliers:  1.5 times the interquartile range above the upper quartile and below the lower quartile (Q1 - 1.5 * IQR or Q3 + 1.5 * IQR).
-
+The boxplot shows the spread of total length  (>1000 bp).The boz shows the data points contained between the 1st and 3rd quartile (Q1 & Q3) and the thick black line is the median of the data. The red points are the outliers and are data points  1.5 times the interquartile range above the upper quartile and below the lower quartile (Q1 - 1.5 * IQR or Q3 + 1.5 * IQR). They provide no information on the underlying data distribution.
+<br/>
 ```{r}
 library(ggplot2)
 options(scipen=10000)
 p <- ggplot(data, aes(x = factor(1), y = `Total length (>= 1000 bp)`)) + 
-  geom_boxplot(width = 0.4, fill = "white",outlier.colour = "red") + labs(x = NULL)  
+  geom_boxplot(width = 0.4, fill = "white",outlier.colour = "red") + labs(x = NULL)  +ggtitle("Box plot: Total length (>=1000bps)")+theme_gray()
 p
 ```
-Question 5: Convert to 1 observation per row (Tidy format) with only sample) name, Metric and value.
+Question 5: Convert to 1 observation per row (Tidy format) with only sample) name, Metric and value.<br/>
 
 ```{r}
+
+#Only for numeric variables
 col.nums<-unlist(sapply(data[1,],is.numeric))
 d3<-pivot_longer(data,which(col.nums==TRUE),names_to = "metric",values_to = "value")
 final_data<-d3[,c("sample_name","metric","value")]
+head(final_data)
 
+#For all metrics
 d4<-sapply(data, as.character)
 d4<-as.data.frame(d4)
 
 d5<-pivot_longer(d4,2:12,names_to = "metric",values_to = "value")
 final_data1<-d5[,c("sample_name","metric","value")]
-
+head(final_data1)
 ```
 
 Question 6: Violin plots for all numeric variables
-
+<br/>
 Violin plots are similar to box plots, except that they also show the kernel probability density of the data at different values
+<br/>
 ```{r}
 # Basic violin 
 final_data$metric<-as.factor(final_data$metric)
 p <- ggplot(final_data, aes(x=factor(1), y=as.numeric(value)),fill='white') + 
-  geom_violin()+ facet_wrap(~metric,  scales = "free_y")+ylab("Value")+xlab("") +geom_jitter(width=0.15, alpha=0.1,color='red')+theme_bw()
+  geom_violin()+ facet_wrap(~metric,  scales = "free_y")+ylab("Value")+xlab("") +geom_jitter(width=0.15, alpha=0.08,color='blue')+theme_gray()
 
 p
 
